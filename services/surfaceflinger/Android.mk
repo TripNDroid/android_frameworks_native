@@ -159,11 +159,13 @@ ifeq ($(TARGET_USES_QCOM_BSP), true)
   LOCAL_SHARED_LIBRARIES += libqdutils
   LOCAL_SHARED_LIBRARIES += libqdMetaData
   LOCAL_CFLAGS += -DQTI_BSP
+  ifneq ($(TARGET_USES_HWC2),true)
   LOCAL_SRC_FILES += \
     ExSurfaceFlinger/ExLayer.cpp \
     ExSurfaceFlinger/ExSurfaceFlinger.cpp \
     ExSurfaceFlinger/ExVirtualDisplaySurface.cpp \
     ExSurfaceFlinger/ExHWComposer.cpp
+  endif
   ifeq ($(TARGET_USES_COLOR_METADATA), true)
     LOCAL_CFLAGS += -DUSE_COLOR_METADATA
   endif
