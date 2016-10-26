@@ -476,10 +476,12 @@ void SurfaceFlinger::init() {
         mEventQueue.setEventThread(mSFEventThread);
 		
        // set SFEventThread to SCHED_FIFO to minimize jitter
-       struct sched_param param = {0};
-       param.sched_priority = 2;
-       if (sched_setscheduler(mSFEventThread->getTid(), SCHED_FIFO, &param) != 0) {
-           ALOGE("Couldn't set SCHED_FIFO for SFEventThread");
+       if (mSFEventThread != NULL) {
+           struct sched_param param = {0};
+           param.sched_priority = 2;
+           if (sched_setscheduler(mSFEventThread->getTid(), SCHED_FIFO, &param) != 0) {
+               ALOGE("Couldn't set SCHED_FIFO for SFEventThread");
+           }
        }
     } else {
         sp<VSyncSource> vsyncSrc = new DispSyncSource(&mPrimaryDispSync,
