@@ -96,12 +96,10 @@ HWComposer* DisplayUtils::getHWCInstance(
                         HWComposer::EventHandler& handler) {
 #ifdef QTI_BSP
     if(sUseExtendedImpls) {
-        return new ExHWComposer(flinger);
+        return new ExHWComposer(flinger, handler);
     }
 #endif
-    return new HWComposer(flinger);
-}
-#endif
+    return new HWComposer(flinger,handler);
 }
 #else
 HWComposer* DisplayUtils::getHWCInstance(
@@ -111,7 +109,7 @@ HWComposer* DisplayUtils::getHWCInstance(
         return new ExHWComposer(flinger);
     }
 #endif
-    return new HWComposer(flinger,handler);
+    return new HWComposer(flinger);
 }
 #endif
 
