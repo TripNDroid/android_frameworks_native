@@ -288,7 +288,6 @@ private:
                      const sp<const DisplayDevice>& hw,
                      const sp<Layer>& layer);
 
-#ifndef USE_HWC2
     virtual bool updateLayerVisibleNonTransparentRegion(
                      const int& dpy, const sp<Layer>& layer,
                      bool& bIgnoreLayers, int& indexLOI,
