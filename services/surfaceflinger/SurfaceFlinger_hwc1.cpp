@@ -204,6 +204,10 @@ SurfaceFlinger::SurfaceFlinger()
     property_get("ro.sf.disable_triple_buffer", value, "1");
     mLayerTripleBufferingDisabled = atoi(value);
     ALOGI_IF(mLayerTripleBufferingDisabled, "Disabling Triple Buffering");
+
+    // we store the value as orientation:
+    // 90 -> 1, 180 -> 2, 270 -> 3
+    mHardwareRotation = property_get_int32("ro.sf.hwrotation", 0) / 90;
 }
 
 void SurfaceFlinger::onFirstRef()
@@ -722,10 +726,18 @@ status_t SurfaceFlinger::getDisplayConfigs(const sp<IBinder>& display,
             info.orientation = 0;
         }
 
-        info.w = hwConfig.width;
-        info.h = hwConfig.height;
-        info.xdpi = xdpi;
-        info.ydpi = ydpi;
+        if ((type == DisplayDevice::DISPLAY_PRIMARY) &&
+                (mHardwareRotation & DisplayState::eOrientationSwapMask)) {
+            info.h = hwConfig.width;
+            info.w = hwConfig.height;
+            info.xdpi = ydpi;
+            info.ydpi = xdpi;
+        } else {
+            info.w = hwConfig.width;
+            info.h = hwConfig.height;
+            info.xdpi = xdpi;
+            info.ydpi = ydpi;
+        }
         info.fps = float(1e9 / hwConfig.refresh);
         info.appVsyncOffset = vsyncPhaseOffsetNs;
 
@@ -1360,8 +1372,8 @@ void SurfaceFlinger::rebuildLayerStacks() {
             const Transform& tr(hw->getTransform());
             const Rect bounds(hw->getBounds());
             if (hw->isDisplayOn()) {
-                computeVisibleRegions(hw->getLayerStack(), dirtyRegion,
-                        opaqueRegion);
+                computeVisibleRegions(hw->getHwcDisplayId(),
+                        hw->getLayerStack(), dirtyRegion, opaqueRegion);
 
                 mDrawingState.traverseInZOrder([&](Layer* layer) {
                     if (layer->getLayerStack() == hw->getLayerStack()) {
@@ -1923,8 +1935,9 @@ void SurfaceFlinger::commitTransaction()
     mTransactionCV.broadcast();
 }
 
-void SurfaceFlinger::computeVisibleRegions(uint32_t layerStack,
-        Region& outDirtyRegion, Region& outOpaqueRegion)
+void SurfaceFlinger::computeVisibleRegions(size_t dpy,
+        uint32_t layerStack, Region& outDirtyRegion,
+        Region& outOpaqueRegion)
 {
     ATRACE_CALL();
 
@@ -1933,13 +1946,17 @@ void SurfaceFlinger::computeVisibleRegions(uint32_t layerStack,
     Region dirty;
 
     outDirtyRegion.clear();
+    bool bIgnoreLayers = false;
+    String8 nameLOI = static_cast<String8>("unnamed");
+    getIndexLOI(dpy, bIgnoreLayers, nameLOI);
 
     mDrawingState.traverseInReverseZOrder([&](Layer* layer) {
         // start with the whole surface at its current location
         const Layer::State& s(layer->getDrawingState());
 
-        // only consider the layers on the given layer stack
-        if (layer->getLayerStack() != layerStack)
+        if (updateLayerVisibleNonTransparentRegion(dpy, layer,
+                                    bIgnoreLayers, nameLOI,
+                                    layerStack))
             return;
 
         /*
